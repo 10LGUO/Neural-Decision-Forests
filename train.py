@@ -5,9 +5,12 @@ import torch
 import torch.nn.functional as F
 import torchvision
 from torch.autograd import Variable
-
+import numpy as np
 import dataset
 import ndf
+from sklearn import metrics
+# import ignite
+# from ignite import metrics
 
 
 def parse_arg():
@@ -16,13 +19,13 @@ def parse_arg():
         format="[%(asctime)s]: %(levelname)s: %(message)s"
     )
     parser = argparse.ArgumentParser(description='train.py')
-    parser.add_argument('-dataset', choices=['mnist', 'adult', 'letter', 'yeast'], default='mnist')
+    parser.add_argument('-dataset', choices=['mnist', 'adult', 'letter', 'yeast','gisette','arrhythmia','cardiotocography','breastcancer','nomao','mutiplefeatures','isolet5','madelon','secom'], default='mnist')
     parser.add_argument('-batch_size', type=int, default=128)
 
-    parser.add_argument('-feat_dropout', type=float, default=0.3)
+    parser.add_argument('-feat_dropout', type=float, default=0.5)
 
-    parser.add_argument('-n_tree', type=int, default=5)
-    parser.add_argument('-tree_depth', type=int, default=3)
+    parser.add_argument('-n_tree', type=int, default=10)
+    parser.add_argument('-tree_depth', type=int, default=10)
     parser.add_argument('-n_class', type=int, default=10)
     parser.add_argument('-tree_feature_rate', type=float, default=0.5)
 
@@ -67,6 +70,43 @@ def prepare_db(opt):
         train_dataset = dataset.UCIYeast('./data/uci_yeast', train=True)
         eval_dataset = dataset.UCIYeast('./data/uci_yeast', train=False)
         return {'train': train_dataset, 'eval': eval_dataset}
+    elif opt.dataset == 'gisette':
+        train_dataset = dataset.UCIGisette('./data/uci_gisette', train=True)
+        eval_dataset = dataset.UCIGisette('./data/uci_gisette', train=False)
+        return {'train': train_dataset, 'eval': eval_dataset}
+    elif opt.dataset == 'arrhythmia':
+        train_dataset = dataset.UCIArrhythmia('./data/uci_arrhythmia', train=True)
+        eval_dataset = dataset.UCIArrhythmia('./data/uci_arrhythmia', train=False)
+        return {'train': train_dataset, 'eval': eval_dataset}
+    elif opt.dataset == 'cardiotocography':
+        train_dataset = dataset.UCICardiotocography('./data/uci_card', train=True)
+        eval_dataset = dataset.UCICardiotocography('./data/uci_card', train=False)
+        return {'train': train_dataset, 'eval': eval_dataset}
+    elif opt.dataset == 'breastcancer':
+        train_dataset = dataset.UCIBreastcancer('./data/uci_breast', train=True)
+        eval_dataset = dataset.UCIBreastcancer('./data/uci_breast', train=False)
+        return {'train': train_dataset, 'eval': eval_dataset}
+    elif opt.dataset == 'nomao':
+        train_dataset = dataset.UCINomao('./data/uci_nomao', train=True)
+        eval_dataset = dataset.UCINomao('./data/uci_nomao', train=False)
+        return {'train': train_dataset, 'eval': eval_dataset}
+    elif opt.dataset == 'multiplefeatures':
+        train_dataset = dataset.UCIMultiplefeatures('./data/uci_multiple_features', train=True)
+        eval_dataset = dataset.UCIMultiplefeatures('./data/uci_multiple_features', train=False)
+        return {'train': train_dataset, 'eval': eval_dataset}
+    elif opt.dataset == 'madelon':
+        train_dataset = dataset.UCIMadelon('./data/uci_madelon', train=True)
+        eval_dataset = dataset.UCIMadelon('./data/uci_madelon', train=False)
+        return {'train': train_dataset, 'eval': eval_dataset}
+    elif opt.dataset == 'secom':
+        train_dataset = dataset.UCISecom('./data/uci_secom', train=True)
+        eval_dataset = dataset.UCISecom('./data/uci_secom', train=False)
+        return {'train': train_dataset, 'eval': eval_dataset}
+    elif opt.dataset == 'isolet5':
+        train_dataset = dataset.UCIIsolet5('./data/uci_isolet5', train=True)
+        eval_dataset = dataset.UCIIsolet5('./data/uci_isolet5', train=False)
+        return {'train': train_dataset, 'eval': eval_dataset}
+    
     else:
         raise NotImplementedError
 
@@ -80,6 +120,25 @@ def prepare_model(opt):
         feat_layer = ndf.UCILetterFeatureLayer(opt.feat_dropout)
     elif opt.dataset == 'yeast':
         feat_layer = ndf.UCIYeastFeatureLayer(opt.feat_dropout)
+    elif opt.dataset == 'gisette':
+        feat_layer = ndf.UCIGisetteFeatureLayer(opt.feat_dropout)
+    elif opt.dataset == 'arrhythmia':
+        feat_layer = ndf.UCIArrhythmiaFeatureLayer(opt.feat_dropout)
+    elif opt.dataset == 'cardiotocography':
+        feat_layer = ndf.UCICardiotocographyFeatureLayer(opt.feat_dropout)
+    elif opt.dataset == 'breastcancer':
+        feat_layer = ndf.UCIBreastcancerFeatureLayer(opt.feat_dropout)
+    elif opt.dataset == 'nomao':
+        feat_layer = ndf.UCINomaoFeatureLayer(opt.feat_dropout)
+    elif opt.dataset == 'mutiplefeatures':
+        feat_layer = ndf.UCIMutiplefeaturesFeatureLayer(opt.feat_dropout)
+    elif opt.dataset == 'madelon':
+        feat_layer = ndf.UCIMadelonFeatureLayer(opt.feat_dropout)
+    elif opt.dataset == 'secom':
+        feat_layer = ndf.UCISecomFeatureLayer(opt.feat_dropout)
+    elif opt.dataset == 'isolet5':
+        feat_layer = ndf.UCIIsolet5FeatureLayer(opt.feat_dropout)
+    
     else:
         raise NotImplementedError
 
@@ -114,13 +173,16 @@ def train(model, optim, db, opt):
             with torch.no_grad():
                 for batch_idx, (data, target) in enumerate(train_loader):
                     if opt.cuda:
-                        data, target, cls_onehot = data.cuda(), target.cuda(), cls_onehot.cuda()
+                        data, target, cls_onehot = data.cuda(), target.long().cuda(), cls_onehot.cuda()
                     data = Variable(data)
                     # Get feats
                     feats = model.feature_layer(data)
                     feats = feats.view(feats.size()[0], -1)
                     feat_batches.append(feats)
+#                     target = target.long().cuda()
+#                     print(target.type())
                     target_batches.append(cls_onehot[target])
+#                     target = target.int().cuda()
 
                 # Update \Pi for each tree
                 for tree in model.forest.trees:
@@ -161,7 +223,7 @@ def train(model, optim, db, opt):
         train_loader = torch.utils.data.DataLoader(db['train'], batch_size=opt.batch_size, shuffle=True)
         for batch_idx, (data, target) in enumerate(train_loader):
             if opt.cuda:
-                data, target = data.cuda(), target.cuda()
+                data, target = data.cuda(), target.long().cuda()
             data, target = Variable(data), Variable(target)
             optim.zero_grad()
             output = model(data)
@@ -181,19 +243,44 @@ def train(model, optim, db, opt):
         correct = 0
         test_loader = torch.utils.data.DataLoader(db['eval'], batch_size=opt.batch_size, shuffle=True)
         with torch.no_grad():
+            targets = np.array([])
+            preds = None
+            i = 0
             for data, target in test_loader:
                 if opt.cuda:
-                    data, target = data.cuda(), target.cuda()
+                    data, target = data.cuda(), target.long().cuda()
                 data, target = Variable(data), Variable(target)
                 output = model(data)
+                targets = np.concatenate((targets, target.cpu().numpy()), axis = 0)
                 test_loss += F.nll_loss(torch.log(output), target, size_average=False).item()  # sum up batch loss
                 pred = output.data.max(1, keepdim=True)[1]  # get the index of the max log-probability
+                if i == 0:
+                    preds = output.cpu().numpy()[:]
+                    i += 1
+                else:
+                    preds = np.concatenate((preds, output.cpu().numpy()[:]), axis = 0)
                 correct += pred.eq(target.data.view_as(pred)).cpu().sum()
+
+                
 
             test_loss /= len(test_loader.dataset)
             print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.6f})\n'.format(
                 test_loss, correct, len(test_loader.dataset),
                 correct / len(test_loader.dataset)))
+            
+            # auc over multiple classes
+            if preds.shape[1] > 2:
+                newtargets = np.zeros([len(targets),preds.shape[1]])
+                for i in range(len(targets)):
+                    newtargets[i,int(targets[i])] = 1
+                print('auc score:')
+#                 print(preds.T.shape)
+#                 print(newtargets.T.shape)
+                print(metrics.roc_auc_score(newtargets.T, preds.T, average = 'macro', multi_class = 'ovo'))
+            else:
+                print('auc score:')
+                print(metrics.roc_auc_score(targets, preds[:,1]))
+
 
 
 def main():

@@ -3,6 +3,7 @@ from torch.utils.data import Dataset
 import os
 import numpy as np
 from sklearn.model_selection import train_test_split
+from sklearn import preprocessing
 
 class UCIAdult(Dataset):
     def __init__(self,root,train=True):
@@ -169,3 +170,318 @@ class UCIYeast(Dataset):
         X = torch.from_numpy(X).type(torch.FloatTensor)
         y = torch.from_numpy(y).type(torch.IntTensor)
         return X,y
+
+class UCIIsolet5(Dataset):
+    def __init__(self,root,train=True):
+        super(UCIIsolet5,self).__init__()
+        self.root = os.path.expanduser(root)
+        self.train = train
+        self.X, self.y = self.load_data(root,train)
+
+
+    def __getitem__(self, index):
+        return (self.X[index],self.y[index])
+
+    def __len__(self):
+        return len(self.X)
+
+
+    def _load_data(self,data_path):
+        with open(data_path) as f:
+            rows = [row.strip().split(', ') for row in f.readlines()]
+        n_datas = len(rows)
+        X = np.zeros((n_datas, 617), dtype=np.float32)
+        y = np.zeros(n_datas, dtype=np.int32)
+        for i, row in enumerate(rows):
+            X[i, :] = list(map(float, row[:-1]))
+            if row[-1][:-1].isdigit():
+                y[i] = int(row[-1][:-1])
+            else: y[i] = 1
+        return X,y
+    
+    def _write_data(self, X, y, data_path):
+        with open(data_path,'w') as f:
+            for X_, y_ in zip(X,y):
+                feat = ', '.join([str(x) for x in X_])
+                f.write('%s, %s.\n'%(feat,y_))
+
+    def load_data(self,root,train):
+        if not os.path.exists(os.path.join(root, "isolet5.train")) or \
+            not os.path.exists(os.path.join(root, "isolet5.test")):
+            data_path = os.path.join(root, "isolet5.data")
+            X,y = self._load_data(data_path)
+            n_datas = len(y)
+            train_idx, test_idx = train_test_split(range(n_datas), random_state=0, train_size=0.7, stratify=y)
+            self._write_data(X[train_idx],y[train_idx],os.path.join(root, "isolet5.train"))
+            self._write_data(X[test_idx], y[test_idx], os.path.join(root, "isolet5.test"))
+
+        if train:
+            data_path = os.path.join(root, "isolet5.train")
+        else:
+            data_path = os.path.join(root, "isolet5.test")
+
+        X, y = self._load_data(data_path)
+        X = preprocessing.scale(X, axis=0, with_mean=True,with_std=True,copy=True)
+        X = torch.from_numpy(X).type(torch.FloatTensor)
+        y = torch.from_numpy(y).type(torch.IntTensor)
+        return X,y
+    
+class UCISecom(Dataset):
+    def __init__(self,root,train=True):
+        super(UCISecom,self).__init__()
+        self.root = os.path.expanduser(root)
+        self.train = train
+        self.X, self.y = self.load_data(root,train)
+
+
+    def __getitem__(self, index):
+        return (self.X[index],self.y[index])
+
+    def __len__(self):
+        return len(self.X)
+
+
+    def _load_data(self,data_path,label_path):
+        with open(data_path) as f:
+            rows = [ row.strip().split() for row in f.readlines()]
+        with open(label_path) as f:
+            self.labels = [ row.split()[0] for row in f.readlines()]
+        print(self.labels)
+        n_datas = len(rows)
+        X = np.zeros((n_datas, 591), dtype=np.float32)
+        y = np.zeros(n_datas, dtype=np.int32)
+        for i, row in enumerate(rows):
+            for j in range(len(row)):
+                if row[j] == 'NaN':
+                    if i > 0:
+                        X[i,j] = X[i-1, j]
+                    elif i < n_datas:
+                        X[i,j] = X[i+1, j]
+                else:
+                    X[i,j] = float(row[j])
+            if self.labels[i] == '1':
+                y[i] = 1
+        return X,y
+
+    def _write_data(self, X, y, data_path, label_path):
+        with open(data_path,'w') as f:
+            for X_, y_ in zip(X,y):
+                feat = ' '.join([str(x) for x in X_])
+                f.write('%s\n'%(feat))
+        with open(label_path,'w') as f:
+            for X_, y_ in zip(X,y):
+                f.write('%s\n'%(y_))
+
+    def load_data(self,root,train):
+        if not os.path.exists(os.path.join(root, "secom.train")) or \
+            not os.path.exists(os.path.join(root, "secom.test")):
+            data_path = os.path.join(root, "secom.data")
+            label_path = os.path.join(root, "secom_labels.data")
+            X,y = self._load_data(data_path, label_path)
+            n_datas = len(y)
+            train_idx, test_idx = train_test_split(range(n_datas), train_size=0.7,stratify=y)
+            self._write_data(X[train_idx],y[train_idx],os.path.join(root,"secom.train"),os.path.join(root,"secom_label.train"))
+            self._write_data(X[test_idx], y[test_idx], os.path.join(root, "secom.test"),os.path.join(root, "secom_label.test"))
+
+        if train:
+            data_path = os.path.join(root, "secom.train")
+            label_path = os.path.join(root, "secom_label.train")
+        else:
+            data_path = os.path.join(root, "secom.test")
+            label_path = os.path.join(root, "secom_label.test")
+
+        X, y = self._load_data(data_path,label_path)
+        X = preprocessing.normalize(X)
+        X = preprocessing.scale(X, axis=0, with_mean=True,with_std=True,copy=True)
+        X = torch.from_numpy(X).type(torch.FloatTensor)
+        y = torch.from_numpy(y).type(torch.IntTensor)
+        return X,y
+    
+class UCIGisette(Dataset):
+    def __init__(self,root,train=True):
+        super(UCIGisette,self).__init__()
+        self.root = os.path.expanduser(root)
+        self.train = train
+        self.X, self.y = self.load_data(root,train)
+
+    def __getitem__(self, index):
+        return (self.X[index],self.y[index])
+
+    def __len__(self):
+        return len(self.X)
+
+    def load_data(self,root,train):
+        if train:
+            data_path = os.path.join(root, "gisette_train.data")
+            label_path = os.path.join(root, "gisette_train.labels")
+        else:
+            data_path = os.path.join(root, "gisette_valid.data")
+            label_path = os.path.join(root, "gisette_valid.labels")            
+        with open(data_path) as f:
+            rows = [[ item.strip() for item in row.strip().split()] for row in f.readlines()]
+        with open(label_path) as f:
+            labels = [int(row.strip()) for row in f.readlines()]
+        n_datas = len(rows)
+        X = np.zeros((n_datas, 5000), dtype=np.float32)
+        y = np.zeros(n_datas, dtype=np.int32)
+        for i, row in enumerate(rows):
+            X[i, :] = list(map(float, row[:]))
+        for j, label in enumerate(labels):
+            y[i] = max(0,labels[i])
+        X = torch.from_numpy(X).type(torch.FloatTensor)
+        y = torch.from_numpy(y).type(torch.IntTensor)
+        return X,y
+
+class UCIBreastcancer(Dataset):
+    def __init__(self,root,train=True):
+        super(UCIBreastcancer,self).__init__()
+        self.root = os.path.expanduser(root)
+        self.train = train
+        self.X, self.y = self.load_data(root,train)
+
+    def __getitem__(self, index):
+        return (self.X[index],self.y[index])
+
+    def __len__(self):
+        return len(self.X)
+
+    def _load_data(self,data_path):
+        with open(data_path) as f:
+            rows = [ row.strip().split(',') for row in f.readlines()]
+        n_datas = len(rows)
+        X = np.zeros((n_datas, 30), dtype=np.float32)
+        y = np.zeros(n_datas, dtype=np.int32)
+        for i, row in enumerate(rows):
+            X[i, :] = list(map(float, row[2:]))
+            y[i] = 1 if row[1]=='M' else 0
+        return X,y
+
+    def _write_data(self, X, y, data_path):
+        labels = ['B','M']
+        with open(data_path,'w') as f:
+            for X_, y_ in zip(X,y):
+                feat = ','.join([str(x) for x in X_])
+                f.write('placeholder,%s,%s\n'%(labels[y_],feat))
+
+    def load_data(self,root,train):
+        if not os.path.exists(os.path.join(root, "breast.train")) or \
+            not os.path.exists(os.path.join(root, "breast.test")):
+            data_path = os.path.join(root, "breast_cancer.data")
+            X,y = self._load_data(data_path)
+            n_datas = len(y)
+            train_idx, test_idx = train_test_split(range(n_datas), train_size=0.7)
+            self._write_data(X[train_idx],y[train_idx],os.path.join(root, "breast.train"))
+            self._write_data(X[test_idx], y[test_idx], os.path.join(root, "breast.test"))
+
+        if train:
+            data_path = os.path.join(root, "breast.train")
+        else:
+            data_path = os.path.join(root, "breast.test")
+
+        X, y = self._load_data(data_path)
+        X = preprocessing.scale(X, axis=0, with_mean=True,with_std=True,copy=True)
+        X = torch.from_numpy(X).type(torch.FloatTensor)
+        y = torch.from_numpy(y).type(torch.IntTensor)
+        return X,y
+    
+class UCIMadelon(Dataset):
+    def __init__(self,root,train=True):
+        super(UCIMadelon,self).__init__()
+        self.root = os.path.expanduser(root)
+        self.train = train
+        self.X, self.y = self.load_data(root,train)
+
+    def __getitem__(self, index):
+        return (self.X[index],self.y[index])
+
+    def __len__(self):
+        return len(self.X)
+
+    def load_data(self,root,train):
+        if train:
+            data_path = os.path.join(root, "madelon_train.data")
+            label_path = os.path.join(root, "madelon_train.labels")
+        else:
+            data_path = os.path.join(root, "madelon_valid.data")
+            label_path = os.path.join(root, "madelon_valid.labels")            
+        with open(data_path) as f:
+            rows = [[item.strip() for item in row.strip().split()] for row in f.readlines()]
+        with open(label_path) as f:
+            labels = [int(row.strip()) for row in f.readlines()]
+        n_datas = len(rows)
+
+        X = np.zeros((n_datas, 500), dtype=np.float32)
+        y = np.zeros(n_datas, dtype=np.int32)
+        for i, row in enumerate(rows):
+            X[i, :] = list(map(float, row[:]))
+        for j, label in enumerate(labels):
+            y[j] = max(0,int(label))
+            
+#         X = preprocessing.normalize(X)
+        X = preprocessing.scale(X, axis=0, with_mean=True,with_std=True,copy=True)
+        X = torch.from_numpy(X).type(torch.FloatTensor)
+        y = torch.from_numpy(y).type(torch.IntTensor)
+        return X,y
+    
+class UCIArrhythmia(Dataset):
+    def __init__(self,root,train=True):
+        super(UCIArrhythmia,self).__init__()
+        self.root = os.path.expanduser(root)
+        self.train = train
+        self.X, self.y = self.load_data(root,train)
+
+    def __getitem__(self, index):
+        return (self.X[index],self.y[index])
+
+    def __len__(self):
+        return len(self.X)
+
+    def _load_data(self,data_path):
+        with open(data_path) as f:
+            rows = [ row.strip().split(',') for row in f.readlines()]
+        n_datas = len(rows)
+
+        X = np.zeros((n_datas, 279), dtype=np.float32)
+        y = np.zeros(n_datas, dtype=np.int32)
+        for i, row in enumerate(rows):
+            for j in range(1, len(row)-1):
+                if row[j] == '?':
+                    if i > 0:
+                        X[i,j] = X[i-1, j]
+                    elif i < n_datas:
+                        X[i,j] = X[i+1, j]
+                else:
+                    X[i,j] = float(row[j])
+
+            y[i] = float(row[-1])
+        self.labels = y
+        return X,y
+
+    def _write_data(self, X, y, data_path):
+        with open(data_path,'w') as f:
+            for X_, y_ in zip(X,y):
+                feat = ','.join([str(x) for x in X_])
+                f.write('placeholder %s,%s\n'%(feat,self.labels[y_]))
+
+    def load_data(self,root,train):
+        if not os.path.exists(os.path.join(root, "arrhythmia.train")) or \
+            not os.path.exists(os.path.join(root, "arrhythmia.test")):
+            data_path = os.path.join(root, "arrhythmia.data")
+            X,y = self._load_data(data_path)
+            n_datas = len(y)
+            train_idx, test_idx = train_test_split(range(n_datas), random_state=0, train_size=0.7, stratify=y)
+            self._write_data(X[train_idx],y[train_idx],os.path.join(root, "arrhythmia.train"))
+            self._write_data(X[test_idx], y[test_idx], os.path.join(root, "arrhythmia.test"))
+
+        if train:
+            data_path = os.path.join(root, "arrhythmia.train")
+        else:
+            data_path = os.path.join(root, "arrhythmia.test")
+
+        X, y = self._load_data(data_path)
+        X = preprocessing.normalize(X)
+        X = preprocessing.scale(X, axis=0, with_mean=True,with_std=True,copy=True)
+        X = torch.from_numpy(X).type(torch.FloatTensor)
+        y = torch.from_numpy(y).type(torch.IntTensor)
+        return X,y
+ 

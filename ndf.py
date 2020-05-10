@@ -69,6 +69,126 @@ class UCIYeastFeatureLayer(nn.Sequential):
     def get_out_feature_size(self):
         return 1024
 
+class UCIIsolet5FeatureLayer(nn.Sequential):
+    def __init__(self,dropout_rate=0.,shallow=True):
+        super(UCIIsolet5FeatureLayer, self).__init__()
+        self.shallow = shallow
+        if shallow:
+            self.add_module('linear', nn.Linear(617, 617))
+            self.add_module('linear', nn.Linear(617, 1024))
+        else:
+            raise  NotImplementedError
+
+    def get_out_feature_size(self):
+        return 1024
+    
+class UCIArrhythmiaFeatureLayer(nn.Sequential):
+    def __init__(self,dropout_rate=0.,shallow=True):
+        super(UCIArrhythmiaFeatureLayer, self).__init__()
+        self.shallow = shallow
+        if shallow:
+            self.add_module('linear', nn.Linear(279, 1024))
+        else:
+            raise  NotImplementedError
+
+    def get_out_feature_size(self):
+        return 1024
+
+class UCIGisetteFeatureLayer(nn.Sequential):
+    def __init__(self,dropout_rate=0.,shallow=True):
+        super(UCIGisetteFeatureLayer, self).__init__()
+        self.shallow = shallow
+        if shallow:
+            self.add_module('linear', nn.Linear(5000, 1024))
+        else:
+            raise  NotImplementedError
+    def get_out_feature_size(self):
+        return 1024
+    
+class UCICardiotocographyFeatureLayer(nn.Sequential):
+    def __init__(self,dropout_rate=0.,shallow=True):
+        super(UCICardiotocographyFeatureLayer, self).__init__()
+        self.shallow = shallow
+        if shallow:
+            self.add_module('linear', nn.Linear(23, 1024))
+        else:
+            raise  NotImplementedError
+    def get_out_feature_size(self):
+        return 1024
+
+class UCIBreastcancerFeatureLayer(nn.Sequential):
+    def __init__(self,dropout_rate=0.,shallow=True):
+        super(UCIBreastcancerFeatureLayer, self).__init__()
+        self.shallow = shallow
+        if shallow:
+            self.add_module('linear', nn.Linear(30, 1024))
+        else:
+            raise  NotImplementedError
+    def get_out_feature_size(self):
+        return 1024
+
+class UCINomaoFeatureLayer(nn.Sequential):
+    def __init__(self,dropout_rate=0.,shallow=True):
+        super(UCINomaoFeatureLayer, self).__init__()
+        self.shallow = shallow
+        if shallow:
+            self.add_module('linear', nn.Linear(120, 1024))
+        else:
+            raise  NotImplementedError
+    def get_out_feature_size(self):
+        return 1024
+
+    
+class UCIMultiplefeaturesFeatureLayer(nn.Sequential):
+    def __init__(self,dropout_rate=0.,shallow=True):
+        super(UCIMultiplefeaturesFeatureLayer, self).__init__()
+        self.shallow = shallow
+        if shallow:
+            self.add_module('linear', nn.Linear(649, 1024))
+        else:
+            raise  NotImplementedError
+    def get_out_feature_size(self):
+        return 1024
+
+    
+class UCIMadelonFeatureLayer(nn.Sequential):
+    def __init__(self,dropout_rate=0.,shallow=True):
+        super(UCIMadelonFeatureLayer, self).__init__()
+        self.shallow = shallow
+        if shallow:
+            self.add_module('linear', nn.Linear(500, 500))
+            self.add_module('linear', nn.Linear(500, 1024))
+        else:
+            raise  NotImplementedError
+    def get_out_feature_size(self):
+        return 1024
+
+    
+class UCISecomFeatureLayer(nn.Sequential):
+    def __init__(self,dropout_rate=0.,shallow=True):
+        super(UCISecomFeatureLayer, self).__init__()
+        self.shallow = shallow
+        if shallow:
+            self.add_module('linear', nn.Linear(591, 1024))
+        else:
+            raise  NotImplementedError
+    def get_out_feature_size(self):
+        return 1024
+
+    
+class UCIIsoletFeatureLayer(nn.Sequential):
+    def __init__(self,dropout_rate=0.,shallow=True):
+        super(UCIIsoletFeatureLayer, self).__init__()
+        self.shallow = shallow
+        if shallow:
+            self.add_module('linear', nn.Linear(617, 1024))
+        else:
+            raise  NotImplementedError
+    def get_out_feature_size(self):
+        return 1024
+
+    
+
 class Tree(nn.Module):
     def __init__(self,depth,n_in_feature,used_feature_rate,n_class, jointly_training=True):
         super(Tree, self).__init__()
